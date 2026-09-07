@@ -1,0 +1,6 @@
+FROM ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:latest
+
+RUN mv /handler.py /handler_base.py && mkdir -p /opt/minimax-h3
+COPY h3_prompt_adapter.py /h3_prompt_adapter.py
+COPY handler_prompt.py /handler.py
+COPY example_workflows/t2v_api.json /opt/minimax-h3/t2v_api.json

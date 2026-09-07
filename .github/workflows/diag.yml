@@ -1,0 +1,30 @@
+name: diag-kitchen-import
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # IMPORTANT: diagnose with the RUNTIME python (/opt/venv — first on PATH), not
+      # /comfyui/.venv. Testing the wrong venv produced false-green results before.
+      - name: Verify runtime venv quant chain in the code image
+        run: |
+          docker run --rm -w /comfyui ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:code /opt/venv/bin/python -c "
+          import sys, subprocess
+          print('exe:', sys.executable)
+          sys.path.insert(0, '/comfyui')
+          import torch
+          print('torch:', torch.__version__, 'cuda:', torch.version.cuda)
+          subprocess.run(['/opt/venv/bin/pip', 'show', 'comfy-kitchen'])
+          assert '+cu126' in torch.__version__, 'torch must be a cu126 wheel — RunPod fleet driver is 570.x (CUDA 12.8), cu130 cannot init'
+          import comfy.quant_ops as q
+          print('CK available:', q._CK_AVAILABLE)
+          from comfy.quant_ops import get_layout_class, QUANT_ALGOS
+          bad = 0
+          for fmt, conf in QUANT_ALGOS.items():
+              cls = get_layout_class(conf['comfy_tensor_layout'])
+              print(fmt, '->', conf['comfy_tensor_layout'], '->', cls)
+              bad += cls is None
+          assert q._CK_AVAILABLE and bad == 0, 'runtime venv quant chain BROKEN'
+          print('RUNTIME QUANT CHAIN OK')
+          "

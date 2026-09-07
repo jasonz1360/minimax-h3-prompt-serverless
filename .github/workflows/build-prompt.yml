@@ -1,0 +1,44 @@
+name: Build prompt-friendly Runpod worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile.prompt
+      - handler_prompt.py
+      - h3_prompt_adapter.py
+      - example_workflows/t2v_api.json
+      - .github/workflows/build-prompt.yml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: imjasonh/setup-crane@v0.4
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Copy model image and append prompt adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="ghcr.io/jasonz1360/minimax-h3-prompt-serverless"
+          crane copy \
+            ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:latest \
+            "$target:base-v1"
+
+          mkdir -p layer/opt/minimax-h3
+          cp handler_prompt.py layer/handler.py
+          cp h3_prompt_adapter.py layer/h3_prompt_adapter.py
+          cp example_workflows/t2v_api.json layer/opt/minimax-h3/t2v_api.json
+          curl --fail --location --retry 3 \
+            https://raw.githubusercontent.com/runpod-workers/worker-comfyui/066a11c49cfe6357902d1b2d8bc8d86bc55128b0/handler.py \
+            --output layer/handler_base.py
+          tar --owner=0 --group=0 -cf prompt-adapter.tar -C layer .
+          crane append -b "$target:base-v1" -f prompt-adapter.tar -t "$target:v1.0.0"
+

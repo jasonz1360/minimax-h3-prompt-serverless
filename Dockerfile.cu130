@@ -1,0 +1,32 @@
+# AWS variant: CUDA 13 build for Blackwell (g7e / RTX PRO 6000, sm_120) and B200 (sm_100).
+#
+# Why a second Dockerfile instead of changing the main one:
+#   - RunPod's H100/H200 fleet runs driver 570.x, which cannot init a cu130 torch at all
+#     ("The NVIDIA driver on your system is too old" — captured from a live H200 boot log),
+#     so the RunPod image stays pinned to cu126.
+#   - torch cu126 ships SASS only for sm_50..sm_90 and no PTX, so it cannot JIT onto
+#     Blackwell: the first kernel launch dies with CUDA error 209
+#     (cudaErrorNoKernelImageForDevice). cu130 is the fix; note cu128 is not an option —
+#     torch stopped building it after 2.11.
+#
+# Bonus, and the reason this may be worth running everywhere eventually: ComfyUI's
+# comfy/quant_ops.py disables comfy-kitchen's compiled CUDA backend whenever
+# torch.version.cuda < 13, so the cu126 image runs every quantized op through the slow
+# pure-torch eager path. This build is the first one that can actually use the shipped
+# int8-convrot / NVFP4 kernels (comfy-kitchen 0.2.26 builds 80;89;90a;100f;120f).
+FROM runpod/worker-comfyui:5.8.6-base
+
+# The runtime venv is /opt/venv (it owns PATH); /comfyui/.venv also exists and is dead weight.
+RUN cd /comfyui && git fetch --depth 1 origin refs/tags/v0.30.1 && git checkout FETCH_HEAD && \
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt && \
+    /opt/venv/bin/pip install --no-cache-dir --force-reinstall torch==2.12.0 torchvision torchaudio \
+      --index-url https://download.pytorch.org/whl/cu130
+
+# Fail the build rather than ship a wheel that cannot drive the target GPUs.
+# (torch.cuda.get_arch_list() is useless here — it returns [] on a GPU-less builder —
+# so check_arch.py scans the compiled library instead.)
+COPY check_arch.py /tmp/check_arch.py
+RUN /opt/venv/bin/python /tmp/check_arch.py sm_90 sm_120 && rm /tmp/check_arch.py
+
+# Weights are appended as separate layers by the build workflow (see .github/workflows/build-cu130.yml).
+RUN mkdir -p /comfyui/models/diffusion_models /comfyui/models/text_encoders /comfyui/models/vae
