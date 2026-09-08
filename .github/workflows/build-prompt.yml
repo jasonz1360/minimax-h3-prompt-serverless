@@ -40,5 +40,4 @@ jobs:
             https://raw.githubusercontent.com/runpod-workers/worker-comfyui/066a11c49cfe6357902d1b2d8bc8d86bc55128b0/handler.py \
             --output layer/handler_base.py
           tar --owner=0 --group=0 -cf prompt-adapter.tar -C layer .
-          crane append -b "$target:base-v1" -f prompt-adapter.tar -t "$target:v1.0.0"
-
+          crane append -b "$target:base-v1" -f prompt-adapter.tar -t "$target:v1.1.0"

@@ -18,9 +18,13 @@ Minimal request:
 }
 ```
 
-Optional prompt-mode fields are `width`, `height`, `length`, and `seed`.
+Optional prompt-mode fields are `width`, `height`, `length`, `seed`, `steps`,
+`first_frame`, and `last_frame`.
 Defaults come from `example_workflows/t2v_api.json`: 1344×768, 124 frames,
-and seed 42. Supplying `input.workflow` bypasses the adapter unchanged.
+seed 42, and 20 steps. Width and height must be multiples of 32, each must be
+between 256 and 1344, and the canvas area cannot exceed 1344×768. Frame values
+are base64 strings or data URIs. Supplying `input.workflow` bypasses the adapter
+unchanged.
 
 MiniMax H3 (Hailuo 3.0) video+audio generation as a RunPod serverless worker.
 Sister repo of [krea2-comfyui-serverless](https://github.com/vincezh2000/krea2-comfyui-serverless), same pattern:
@@ -73,8 +77,10 @@ Knobs in `example_workflows/t2v_api.json`:
 - **width/height** — 32-multiples, area capped at 768×1344 (1344×768 = 16:9 max)
 - **length** — frame count at 24 fps on the model's 17k+5 grid: 124 ≈ 5s, 243 ≈ 10s, 362 ≈ 15s
   (invalid values snap up automatically)
-- **I2V**: add `"first_frame": ["<load_image_node>", 0]` (and optionally `last_frame`) to the
-  `MiniMaxH3ImageToVideo` node; upload input images via worker-comfyui's `input.images` field
+- **steps** — 1–50 sampling steps; 20 is the reference-quality default, 16 is the
+  balanced preset, and 12 is suitable for faster previews
+- **first_frame/last_frame** — optional base64 image strings or data URIs. The
+  adapter uploads them and connects the required `LoadImage` nodes automatically
 
 ## Build pipeline
 
