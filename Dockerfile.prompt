@@ -1,8 +1,10 @@
 # PyTorch 2.12 + CUDA 13 supports both Ada and Blackwell. RunPod must use
 # minCudaVersion=13.0 so workers are scheduled on compatible host drivers.
-FROM ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:cu130@sha256:ea5f24c99b0c784d55201fcd54e6e0fbdef8bb2aa00bb0940f64fc9de497f2ab
+# Code-only base: model weights live on the endpoint's network volume.
+FROM ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:cu130-code@sha256:50e8ee83a2bfd165b78eee1115dd7b941f19ae7fcf07741438528ac6faa45ff3
 
 RUN mv /handler.py /handler_base.py && mkdir -p /opt/minimax-h3
 COPY h3_prompt_adapter.py /h3_prompt_adapter.py
 COPY handler_prompt.py /handler.py
 COPY example_workflows/t2v_api.json /opt/minimax-h3/t2v_api.json
+COPY extra_model_paths.yaml /comfyui/extra_model_paths.yaml

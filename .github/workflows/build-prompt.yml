@@ -8,6 +8,7 @@ on:
       - Dockerfile.prompt
       - handler_prompt.py
       - h3_prompt_adapter.py
+      - extra_model_paths.yaml
       - example_workflows/t2v_api.json
       - .github/workflows/build-prompt.yml
 
@@ -25,7 +26,7 @@ jobs:
       - uses: imjasonh/setup-crane@v0.4
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
-      - name: Copy model image and append prompt adapter
+      - name: Copy code-only image and append prompt adapter
         shell: bash
         run: |
           set -euo pipefail
@@ -33,14 +34,15 @@ jobs:
           base_image="$(awk '$1 == "FROM" {print $2; exit}' Dockerfile.prompt)"
           crane copy \
             "$base_image" \
-            "$target:base-cu130-v1.2.0"
+            "$target:base-cu130-volume-v1.3.0"
 
-          mkdir -p layer/opt/minimax-h3
+          mkdir -p layer/opt/minimax-h3 layer/comfyui
           cp handler_prompt.py layer/handler.py
           cp h3_prompt_adapter.py layer/h3_prompt_adapter.py
           cp example_workflows/t2v_api.json layer/opt/minimax-h3/t2v_api.json
+          cp extra_model_paths.yaml layer/comfyui/extra_model_paths.yaml
           curl --fail --location --retry 3 \
             https://raw.githubusercontent.com/runpod-workers/worker-comfyui/066a11c49cfe6357902d1b2d8bc8d86bc55128b0/handler.py \
             --output layer/handler_base.py
           tar --owner=0 --group=0 -cf prompt-adapter.tar -C layer .
-          crane append -b "$target:base-cu130-v1.2.0" -f prompt-adapter.tar -t "$target:v1.2.0-cu130"
+          crane append -b "$target:base-cu130-volume-v1.3.0" -f prompt-adapter.tar -t "$target:v1.3.0-cu130-volume"
