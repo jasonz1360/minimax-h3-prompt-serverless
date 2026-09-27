@@ -5,7 +5,18 @@
 This fork adds a prompt-only request interface while preserving the original
 `input.workflow` API. The published image is:
 
-`ghcr.io/jasonz1360/minimax-h3-prompt-serverless:v1.0.0`
+`ghcr.io/jasonz1360/minimax-h3-prompt-serverless:v1.2.0-cu130`
+
+This image uses PyTorch 2.12.0 with CUDA 13.0 and supports both the Ada 48 GB
+pool (L40/L40S/RTX 6000 Ada) and Blackwell 96 GB pool (RTX PRO 6000).
+Set the endpoint's **minimum CUDA version to 13.0** to select compatible
+host drivers. The earlier `v1.1.0` image uses CUDA 12.6 and cannot run on
+Blackwell. `Dockerfile.prompt` pins the CUDA 13 base by digest; the prompt
+build workflow copies that same base and adds the existing API adapter.
+
+To pause an endpoint without queued jobs recreating workers, set both
+minimum and maximum workers to **0**. Restore maximum workers to **1** when
+ready to test; keep minimum workers at **0** for scale-to-zero operation.
 
 Minimal request:
 
@@ -48,8 +59,9 @@ Model capabilities: up to ~15s at 24 FPS with **native stereo audio** (speech/SF
 
 | Setting | Value |
 |---|---|
-| Container image | `ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:latest` |
-| GPU | 80 GB (A100/H100) recommended; 48 GB (L40S/A6000) works for 768p with offloading |
+| Container image | `ghcr.io/jasonz1360/minimax-h3-prompt-serverless:v1.2.0-cu130` |
+| GPU | Ada 48 GB (L40/L40S/RTX 6000 Ada) and Blackwell 96 GB (RTX PRO 6000) |
+| Minimum CUDA version | **13.0** (requires a compatible host driver) |
 | Container disk | **≥ 100 GB** (image unpacks to ~55 GB) |
 | FlashBoot | on |
 | Env (optional) | `BUCKET_ENDPOINT_URL` etc. for S3 output upload — without it results return as base64 |

@@ -1,4 +1,6 @@
-FROM ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:latest
+# PyTorch 2.12 + CUDA 13 supports both Ada and Blackwell. RunPod must use
+# minCudaVersion=13.0 so workers are scheduled on compatible host drivers.
+FROM ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:cu130@sha256:ea5f24c99b0c784d55201fcd54e6e0fbdef8bb2aa00bb0940f64fc9de497f2ab
 
 RUN mv /handler.py /handler_base.py && mkdir -p /opt/minimax-h3
 COPY h3_prompt_adapter.py /h3_prompt_adapter.py

@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Test prompt interface
+        run: python3 -m unittest -v test_prompt_adapter.py
       - uses: imjasonh/setup-crane@v0.4
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -28,9 +30,10 @@ jobs:
         run: |
           set -euo pipefail
           target="ghcr.io/jasonz1360/minimax-h3-prompt-serverless"
+          base_image="$(awk '$1 == "FROM" {print $2; exit}' Dockerfile.prompt)"
           crane copy \
-            ghcr.io/vincezh2000/minimax-h3-comfyui-serverless:latest \
-            "$target:base-v1"
+            "$base_image" \
+            "$target:base-cu130-v1.2.0"
 
           mkdir -p layer/opt/minimax-h3
           cp handler_prompt.py layer/handler.py
@@ -40,4 +43,4 @@ jobs:
             https://raw.githubusercontent.com/runpod-workers/worker-comfyui/066a11c49cfe6357902d1b2d8bc8d86bc55128b0/handler.py \
             --output layer/handler_base.py
           tar --owner=0 --group=0 -cf prompt-adapter.tar -C layer .
-          crane append -b "$target:base-v1" -f prompt-adapter.tar -t "$target:v1.1.0"
+          crane append -b "$target:base-cu130-v1.2.0" -f prompt-adapter.tar -t "$target:v1.2.0-cu130"
